@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="380" viewBox="0 0 640 380">
+  <rect width="640" height="380" fill="#d8d3c4"/>
+  <g fill="#8a8474" font-family="Georgia, serif">
+    <text x="320" y="180" font-size="22" text-anchor="middle">THE DAILY DISPATCH</text>
+    <text x="320" y="210" font-size="13" text-anchor="middle">Image unavailable</text>
+  </g>
+  <rect x="20" y="20" width="600" height="340" fill="none" stroke="#8a8474" stroke-width="2"/>
+</svg>
