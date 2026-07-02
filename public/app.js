@@ -16,11 +16,16 @@
     noteBanner: document.getElementById("note-banner"),
     skeleton: document.getElementById("skeleton"),
     emptyState: document.getElementById("empty-state"),
-    heroSlot: document.getElementById("hero-slot"),
+    featuredRow: document.getElementById("featured-row"),
+    secondarySlot: document.getElementById("secondary-slot"),
+    leadSlot: document.getElementById("lead-slot"),
+    popularSlot: document.getElementById("popular-slot"),
+    row2: document.getElementById("row2"),
     grid: document.getElementById("grid"),
     modalOverlay: document.getElementById("modal-overlay"),
     modalBody: document.getElementById("modal-body"),
     modalClose: document.getElementById("modal-close"),
+    themeToggle: document.getElementById("theme-toggle"),
   };
 
   function todayISO() {
@@ -109,12 +114,19 @@
     renderNews(data);
   }
 
+  function clearSlots() {
+    els.secondarySlot.innerHTML = "";
+    els.leadSlot.innerHTML = "";
+    els.popularSlot.innerHTML = "";
+    els.row2.innerHTML = "";
+    els.grid.innerHTML = "";
+  }
+
   function setLoading(isLoading) {
     els.skeleton.hidden = !isLoading;
     if (isLoading) {
       els.emptyState.hidden = true;
-      els.heroSlot.innerHTML = "";
-      els.grid.innerHTML = "";
+      clearSlots();
     }
   }
 
@@ -128,31 +140,70 @@
     els.noteBanner.textContent = "";
   }
 
+  const POPULAR_COUNT = 6;
+  const ROW2_COUNT = 2;
+
   function renderNews(data) {
     const articles = Array.isArray(data.articles) ? data.articles : [];
 
     if (data.meta && data.meta.note) showNote(data.meta.note);
 
+    clearSlots();
+
     if (articles.length === 0) {
       els.emptyState.hidden = false;
-      els.heroSlot.innerHTML = "";
-      els.grid.innerHTML = "";
       return;
     }
 
     els.emptyState.hidden = true;
-    const [lead, ...rest] = articles;
-    els.heroSlot.innerHTML = "";
-    els.heroSlot.appendChild(buildHeroCard(lead));
 
-    els.grid.innerHTML = "";
-    for (const article of rest) {
+    let cursor = 0;
+    const lead = articles[cursor++];
+    const secondary = articles[cursor++];
+    const popular = articles.slice(cursor, cursor + POPULAR_COUNT);
+    cursor += popular.length;
+    const row2Articles = articles.slice(cursor, cursor + ROW2_COUNT);
+    cursor += row2Articles.length;
+    const restArticles = articles.slice(cursor);
+
+    els.leadSlot.appendChild(buildArticleBox(lead, "lead"));
+
+    els.secondarySlot.hidden = !secondary;
+    if (secondary) els.secondarySlot.appendChild(buildArticleBox(secondary, "feature"));
+
+    els.popularSlot.hidden = popular.length === 0;
+    if (popular.length) els.popularSlot.appendChild(buildPopularPanel(popular));
+
+    els.row2.hidden = row2Articles.length === 0;
+    row2Articles.forEach((article) => els.row2.appendChild(buildArticleBox(article, "split")));
+
+    for (const article of restArticles) {
       els.grid.appendChild(buildCard(article));
     }
   }
 
-  function buildHeroCard(article) {
-    const card = el("article", "hero-card");
+  function buildFeatureMeta(article) {
+    const meta = el("div", "feature-meta");
+    const label = state.region === "india" ? "India" : "World";
+    const metaText = el(
+      "span",
+      "feature-meta-text",
+      `&mdash; ${label} &bull; ${escapeHtml(article.source || "Unknown Source")} &bull; ${relativeTime(article.publishedAt)}${
+        article.dateMatch === "nearby" ? '<span class="nearby-tag">Nearby</span>' : ""
+      }`
+    );
+    const share = el("a", "feature-share", "&#8599;");
+    share.href = article.link;
+    share.target = "_blank";
+    share.rel = "noopener noreferrer";
+    share.setAttribute("aria-label", "Open original article");
+    share.addEventListener("click", (e) => e.stopPropagation());
+    meta.append(metaText, share);
+    return meta;
+  }
+
+  function buildArticleBox(article, variant) {
+    const card = el("article", `feature-card feature-card--${variant}`);
     card.tabIndex = 0;
     card.setAttribute("role", "button");
 
@@ -162,25 +213,50 @@
     const imgFrame = el("div", "img-frame");
     imgFrame.appendChild(img);
 
-    const textWrap = el("div");
-    const kicker = el("div", "kicker", state.region === "india" ? "Top Story &middot; India" : "Top Story &middot; World");
-    const h2 = el("h2", null, escapeHtml(article.title));
+    const textWrap = el("div", "feature-text");
+    const titleTag = variant === "lead" ? "h2" : "h3";
+    const title = el(titleTag, null, escapeHtml(article.title));
     const snippet = el("p", "snippet", escapeHtml(article.snippet || ""));
-    const byline = el(
-      "div",
-      "byline",
-      `${escapeHtml(article.source || "Unknown Source")} &middot; ${relativeTime(article.publishedAt)}${
-        article.dateMatch === "nearby" ? '<span class="nearby-tag">Nearby date</span>' : ""
-      }`
-    );
 
-    textWrap.append(kicker, h2, snippet, byline);
+    textWrap.append(title, buildFeatureMeta(article), snippet);
     card.append(imgFrame, textWrap);
     card.addEventListener("click", () => openModal(article));
     card.addEventListener("keydown", (e) => {
       if (e.key === "Enter" || e.key === " ") openModal(article);
     });
     return card;
+  }
+
+  function buildPopularPanel(articles) {
+    const panel = el("div", "popular-panel");
+    const header = el("div", "popular-header");
+    header.append(el("h3", null, "Popular Articles Now"), el("span", "popular-badge", `${articles.length} More`));
+
+    const list = el("ol", "popular-list");
+    articles.forEach((article, i) => {
+      const item = el("li", "popular-item");
+      item.tabIndex = 0;
+      item.setAttribute("role", "button");
+
+      const num = el("span", "popular-num", String(i + 1).padStart(2, "0"));
+      const body = el("div", "popular-body");
+      const byline = el(
+        "div",
+        "byline",
+        `${escapeHtml(article.source || "Unknown Source")} &middot; ${relativeTime(article.publishedAt)}`
+      );
+      body.append(el("h4", null, escapeHtml(article.title)), byline);
+
+      item.append(num, body);
+      item.addEventListener("click", () => openModal(article));
+      item.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") openModal(article);
+      });
+      list.appendChild(item);
+    });
+
+    panel.append(header, list);
+    return panel;
   }
 
   function buildCard(article) {
@@ -282,7 +358,27 @@
     document.body.style.overflow = "";
   }
 
+  function initThemeToggle() {
+    const icon = els.themeToggle.querySelector(".theme-toggle-icon");
+
+    function applyTheme(theme) {
+      document.documentElement.setAttribute("data-theme", theme);
+      els.themeToggle.setAttribute("aria-pressed", String(theme === "dark"));
+      icon.innerHTML = theme === "dark" ? "&#9788;" : "&#9789;";
+    }
+
+    applyTheme(document.documentElement.getAttribute("data-theme") || "light");
+
+    els.themeToggle.addEventListener("click", () => {
+      const next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+      localStorage.setItem("theme", next);
+      applyTheme(next);
+    });
+  }
+
   function initControls() {
+    initThemeToggle();
+
     els.tabs.forEach((tab) => {
       tab.addEventListener("click", () => {
         if (tab.classList.contains("active")) return;

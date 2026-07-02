@@ -12,11 +12,21 @@
     rel="stylesheet"
   />
   <link rel="stylesheet" href="styles.css" />
+  <script>
+    (function () {
+      var saved = localStorage.getItem("theme");
+      var theme = saved || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      document.documentElement.setAttribute("data-theme", theme);
+    })();
+  </script>
 </head>
 <body>
   <header class="masthead">
     <div class="masthead-top">
       <span class="masthead-date" id="masthead-date">&nbsp;</span>
+      <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Toggle dark mode" aria-pressed="false">
+        <span class="theme-toggle-icon" aria-hidden="true">&#9789;</span>
+      </button>
       <span class="masthead-est">Est. 2026 &middot; Local Edition</span>
     </div>
     <h1 class="masthead-title">The Daily Dispatch</h1>
@@ -51,7 +61,12 @@
       <p>No stories on file for this edition yet.</p>
       <p class="empty-sub">Try choosing a different date.</p>
     </div>
-    <section id="hero-slot"></section>
+    <section id="featured-row" class="featured-row">
+      <div id="secondary-slot"></div>
+      <div id="lead-slot"></div>
+      <aside id="popular-slot"></aside>
+    </section>
+    <section id="row2" class="feature-row-2"></section>
     <section id="grid" class="article-grid"></section>
   </main>
 
